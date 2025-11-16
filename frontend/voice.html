@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LiveKit Voice Demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="p-4">
+    <div class="container">
+        <h1>LiveKit Voice Demo</h1>
+        <p class="text-muted">Connect to a LiveKit room and demo local voice interaction with the AI agent backend.</p>
+
+        <div class="mb-3">
+            <label class="form-label">Identity</label>
+            <input id="identity" class="form-control" value="demo" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Room</label>
+            <input id="room" class="form-control" value="voice-room" />
+        </div>
+
+        <button id="start" class="btn btn-primary">Start Voice Chat</button>
+        <button id="leave" class="btn btn-secondary ms-2" disabled>Leave</button>
+
+        <div id="log" class="mt-4"></div>
+    </div>
+
+    <script type="module">
+        import { connect } from "https://cdn.livekit.io/packages/livekit-client/1.13.0/livekit-client.esm.js";
+
+        // API base URL - configured via localStorage or defaults
+        const API_BASE = (() => {
+            const stored = localStorage.getItem('API_BASE_URL');
+            if (stored) return stored;
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                return 'http://127.0.0.1:8000';
+            }
+            console.warn('API_BASE_URL not configured.');
+            return 'http://127.0.0.1:8000';
+        })();
+
+        const startBtn = document.getElementById('start');
+        const leaveBtn = document.getElementById('leave');
+        const logEl = document.getElementById('log');
+
+        function log(...args) {
+            const p = document.createElement('div');
+            p.textContent = args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ');
+            logEl.prepend(p);
+        }
+
+        let room = null;
+
+        startBtn.onclick = async () => {
+            const identity = document.getElementById('identity').value || 'demo';
+            const roomName = document.getElementById('room').value || 'voice-room';
+
+            log('Requesting token...');
+            try {
+                const res = await fetch(`${API_BASE}/livekit/token?identity=${encodeURIComponent(identity)}&room=${encodeURIComponent(roomName)}`);
+
+                if (!res.ok) {
+                    log('Failed to fetch token:', res.status, res.statusText);
+                    return;
+                }
+
+                const data = await res.json();
+
+                if (!data.token || data.token === 'PLACEHOLDER_TOKEN') {
+                    log('Token endpoint returned a placeholder token or missing SDK.');
+                    log('Set LIVEKIT_API_KEY / LIVEKIT_API_SECRET and install livekit-server-sdk to generate real tokens.');
+                    return;
+                }
+
+                try {
+                    log('Connecting to LiveKit:', data.url);
+                    room = await connect(data.url, data.token, { audio: true, video: false });
+                    log('Connected to room', room.name);
+
+                    room.on('participantConnected', p => log('Participant joined:', p.identity));
+                    room.on('participantDisconnected', p => log('Participant left:', p.identity));
+
+                    // Enable UI
+                    startBtn.disabled = true;
+                    leaveBtn.disabled = false;
+
+                    // Optionally: forward spoken text to backend /agent/ask using speech-to-text (not implemented here)
+
+                } catch (err) {
+                    log('Connection failed:', err.message || err);
+                }
+            } catch (err) {
+                log('Error:', err.message || err);
+            }
+        };
+
+        leaveBtn.onclick = () => {
+            if (room) {
+                room.disconnect();
+                room = null;
+                startBtn.disabled = false;
+                leaveBtn.disabled = true;
+                log('Left room');
+            }
+        };
+    </script>
+
+</body>
+
+</html>

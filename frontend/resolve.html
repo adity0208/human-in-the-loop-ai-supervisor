@@ -58,20 +58,81 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // API base URL - configured via localStorage or defaults
+        const API_BASE = (() => {
+            const stored = localStorage.getItem('API_BASE_URL');
+            if (stored) return stored;
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                return 'http://127.0.0.1:8000';
+            }
+            console.warn('API_BASE_URL not configured.');
+            return 'http://127.0.0.1:8000';
+        })();
+
         const urlParams = new URLSearchParams(window.location.search);
         const request_id = urlParams.get("request_id");
         const question = urlParams.get("question");
+        const caller_id = urlParams.get("caller_id");
 
-        document.getElementById("details").innerHTML = `
-            <p><strong>Request ID:</strong> ${request_id}</p>
-            <p><strong>Question:</strong> ${question}</p>
-        `;
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById("details").innerHTML = `
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <p class="mb-1"><small class="text-muted">Request ID</small></p>
+                        <p><code class="text-primary">${request_id.substring(0, 8)}...</code></p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <p class="mb-1"><small class="text-muted">Caller</small></p>
+                        <p><span class="badge bg-info">${caller_id}</span></p>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <p class="mb-1"><small class="text-muted">Question</small></p>
+                    <p><strong>${question}</strong></p>
+                </div>
+            `;
+        });
 
         async function submitAnswer() {
             const answer = document.getElementById("answer").value;
-            await fetch("http://127.0.0.1:8000/help/requests/resolve?request_id=" + request_id + "&answer=" + encodeURIComponent(answer), { method: "POST" });
-            alert("Request resolved successfully!");
-            window.location.href = "pending.html";
+
+            if (!answer.trim()) {
+                alert("Please enter an answer");
+                return;
+            }
+
+            try {
+                const submitBtn = event.target;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Submitting...';
+
+                const response = await fetch(
+                    `${API_BASE}/help/requests/resolve?request_id=${request_id}&answer=${encodeURIComponent(answer)}`,
+                    { method: "POST" }
+                );
+
+                if (response.ok) {
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'alert alert-success alert-dismissible fade show';
+                    successMsg.innerHTML = `
+                        <i class="bi bi-check-circle me-2"></i>
+                        <strong>Success!</strong> Request resolved and saved to knowledge base.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    document.querySelector('.card-body').insertBefore(successMsg, document.querySelector('.mb-3'));
+
+                    setTimeout(() => {
+                        window.location.href = "pending.html";
+                    }, 1500);
+                } else {
+                    throw new Error('Failed to resolve request');
+                }
+            } catch (e) {
+                alert("Error: " + e.message);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Submit';
+                console.error("Submission error:", e);
+            }
         }
     </script>
 

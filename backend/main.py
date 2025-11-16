@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from backend.routes.help_requests import router as help_requests_router
 from backend.routes.knowledge_base import router as kb_router
 from backend.routes.agent import router as agent_router
+from backend.routes.livekit_token import router as livekit_router
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
@@ -24,6 +25,7 @@ app.add_middleware(
 app.include_router(help_requests_router, prefix="/help")
 app.include_router(kb_router, prefix="/kb")
 app.include_router(agent_router, prefix="/agent")
+app.include_router(livekit_router)
 
 
 @app.get("/")

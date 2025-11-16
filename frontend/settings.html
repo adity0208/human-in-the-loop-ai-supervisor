@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>App Settings</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="index.html"><i class="bi bi-gear me-2"></i>Settings</a>
+            <a href="index.html" class="btn btn-sm btn-outline-light ms-auto">← Dashboard</a>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="bi bi-server me-2"></i>Backend Configuration</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Configure your backend API endpoint. This is only needed once.</p>
+
+                        <div class="mb-3">
+                            <label class="form-label">Backend API URL</label>
+                            <input type="text" id="apiUrl" class="form-control form-control-lg"
+                                placeholder="https://your-backend.railway.app" value="">
+                            <small class="form-text text-muted d-block mt-1">
+                                Example: <code>https://human-in-the-loop-prod.railway.app</code>
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <button class="btn btn-primary w-100 mb-2" onclick="saveConfig()">
+                                <i class="bi bi-check-circle me-2"></i> Save Configuration
+                            </button>
+                            <button class="btn btn-outline-secondary w-100" onclick="testConnection()">
+                                <i class="bi bi-plug me-2"></i> Test Connection
+                            </button>
+                        </div>
+
+                        <div id="status"></div>
+
+                        <hr class="my-4">
+
+                        <div class="alert alert-info">
+                            <h6 class="mb-2"><i class="bi bi-info-circle me-2"></i>Need a Backend?</h6>
+                            <p class="mb-2 small">Deploy your backend using one of these platforms:</p>
+                            <ul class="small mb-0">
+                                <li><strong>Railway:</strong> <code>https://railway.app</code> (Recommended)</li>
+                                <li><strong>Render:</strong> <code>https://render.com</code></li>
+                                <li><strong>Heroku:</strong> <code>https://heroku.com</code></li>
+                            </ul>
+                        </div>
+
+                        <div class="alert alert-success">
+                            <h6 class="mb-2"><i class="bi bi-check-circle me-2"></i>Local Development?</h6>
+                            <p class="mb-1 small">Use this URL:</p>
+                            <code>http://127.0.0.1:8000</code>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-top">
+                            <p class="small text-muted mb-2">Current Configuration:</p>
+                            <div class="bg-light p-2 rounded" style="font-family: monospace; font-size: 0.85rem;">
+                                <div id="currentConfig">Not set</div>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger mt-2" onclick="clearConfig()">
+                                <i class="bi bi-trash me-1"></i> Clear Configuration
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load saved config on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadConfig();
+        });
+
+        function loadConfig() {
+            const saved = localStorage.getItem('API_BASE_URL');
+            const configDiv = document.getElementById('currentConfig');
+
+            if (saved) {
+                document.getElementById('apiUrl').value = saved;
+                configDiv.innerHTML = `API_BASE_URL = <br><code>"${saved}"</code>`;
+            } else {
+                configDiv.innerHTML = 'No backend URL configured yet';
+            }
+        }
+
+        function saveConfig() {
+            const url = document.getElementById('apiUrl').value.trim();
+
+            if (!url) {
+                showStatus('❌ Please enter a valid URL', 'danger');
+                return;
+            }
+
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                showStatus('❌ URL must start with http:// or https://', 'danger');
+                return;
+            }
+
+            // Remove trailing slash if present
+            const cleanUrl = url.replace(/\/$/, '');
+
+            localStorage.setItem('API_BASE_URL', cleanUrl);
+            document.getElementById('apiUrl').value = cleanUrl;
+
+            showStatus('✅ Backend URL saved successfully! Reload other pages to apply changes.', 'success');
+            loadConfig();
+        }
+
+        async function testConnection() {
+            const url = document.getElementById('apiUrl').value.trim();
+
+            if (!url) {
+                showStatus('⚠️ Please enter a URL first', 'warning');
+                return;
+            }
+
+            showStatus('🔄 Testing connection to backend...', 'info');
+
+            try {
+                const cleanUrl = url.replace(/\/$/, '');
+                const response = await fetch(`${cleanUrl}/docs`, {
+                    method: 'GET',
+                    headers: { 'Accept': '*/*' }
+                });
+
+                if (response.ok) {
+                    showStatus('✅ Successfully connected! Backend is reachable at ' + cleanUrl, 'success');
+                    saveConfig(); // Auto-save on successful test
+                } else if (response.status === 404) {
+                    showStatus('⚠️ Got 404 - URL might be wrong. Got status: ' + response.status, 'warning');
+                } else {
+                    showStatus('⚠️ Backend responded with status ' + response.status + '. Might still work.', 'warning');
+                }
+            } catch (e) {
+                showStatus('❌ Could not connect to backend: ' + e.message +
+                    '<br><small>Check that URL is correct and CORS is enabled</small>', 'danger');
+            }
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>`;
+        }
+
+        function clearConfig() {
+            if (confirm('Are you sure you want to clear the backend configuration?')) {
+                localStorage.removeItem('API_BASE_URL');
+                document.getElementById('apiUrl').value = '';
+                loadConfig();
+                showStatus('✅ Configuration cleared', 'success');
+            }
+        }
+    </script>
+
+</body>
+
+</html>

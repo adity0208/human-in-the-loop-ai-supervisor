@@ -1,0 +1,6 @@
+{
+    "version": 2,
+    "buildCommand": "echo 'Frontend static files only'",
+    "outputDirectory": "frontend",
+    "public": true
+}

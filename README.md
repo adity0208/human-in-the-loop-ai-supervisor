@@ -1,9 +1,7 @@
-# **Human-in-the-Loop AI Supervisor — Assessment Submission**
+# MOVED: Documentation archived to .env
 
-This project implements a **human-supervised AI Agent** that can answer customer questions, escalate unknown queries to a supervisor, learn from the supervisor’s answers, and improve over time.
-It follows the exact workflow and requirements specified in the assessment PDF.
-
----
+The original content has been moved to `.env` (which is ignored by git).
+Search `.env` for `--- BEGIN FILE: README.md ---` to restore.
 
 ## ⭐ **Features**
 

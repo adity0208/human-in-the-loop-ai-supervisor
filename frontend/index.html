@@ -129,22 +129,52 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // API base URL - configured via localStorage or defaults
+        const API_BASE = (() => {
+            const stored = localStorage.getItem('API_BASE_URL');
+            if (stored) return stored;
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                return 'http://127.0.0.1:8000';
+            }
+            console.warn('API_BASE_URL not configured. Set localStorage.setItem("API_BASE_URL", "https://your-backend-url")');
+            return 'http://127.0.0.1:8000';
+        })();
+
         async function fetchCounts() {
             try {
                 const [pendingRes, historyRes, kbRes] = await Promise.all([
-                    fetch('http://127.0.0.1:8000/help/requests/pending'),
-                    fetch('http://127.0.0.1:8000/help/requests/history'),
-                    fetch('http://127.0.0.1:8000/kb/all')
+                    fetch(`${API_BASE}/help/requests/pending`),
+                    fetch(`${API_BASE}/help/requests/history`),
+                    fetch(`${API_BASE}/kb/all`)
                 ]);
                 const [pending, history, kb] = await Promise.all([pendingRes.json(), historyRes.json(), kbRes.json()]);
-                document.getElementById('cnt-pending').textContent = pending.length || 0;
-                document.getElementById('cnt-resolved').textContent = (history.filter(r => r.status === 'resolved').length) || 0;
-                document.getElementById('cnt-kb').textContent = kb.length || 0;
+
+                // Update counts with animation
+                updateCount('cnt-pending', pending.length || 0);
+                updateCount('cnt-resolved', (history.filter(r => r.status === 'resolved').length) || 0);
+                updateCount('cnt-kb', kb.length || 0);
             } catch (e) {
-                console.warn('Could not fetch counts', e);
+                console.warn('Could not fetch counts:', e.message);
+                document.getElementById('cnt-pending').textContent = '0';
+                document.getElementById('cnt-resolved').textContent = '0';
+                document.getElementById('cnt-kb').textContent = '0';
             }
         }
-        fetchCounts();
+
+        function updateCount(elementId, value) {
+            const elem = document.getElementById(elementId);
+            if (elem && elem.textContent !== value.toString()) {
+                elem.style.opacity = '0.5';
+                elem.textContent = value;
+                setTimeout(() => { elem.style.opacity = '1'; }, 100);
+            }
+        }
+
+        // Fetch counts on page load
+        document.addEventListener('DOMContentLoaded', fetchCounts);
+
+        // Refresh counts every 5 seconds
+        setInterval(fetchCounts, 5000);
     </script>
 </body>
 
