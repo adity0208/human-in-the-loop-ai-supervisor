@@ -1,9 +1,3 @@
-# MOVED: Documentation archived to .env
-
-The original content has been moved to `.env` (which is ignored by git).
-Search `.env` for `--- BEGIN FILE: README.md ---` to restore.
-
-## ⭐ **Features**
 
 ### **AI Agent**
 
@@ -89,7 +83,7 @@ frontend/
 ### **1. Clone Repository**
 
 ```bash
-git clone <your repo url>
+git clone https://github.com/adity0208/human-in-the-loop-ai-supervisor.git
 cd human-in-the-loop-ai-supervisor
 ```
 
